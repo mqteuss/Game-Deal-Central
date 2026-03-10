@@ -1,14 +1,16 @@
 import React from 'react';
 import { GameDeal } from '../types';
-import { ExternalLink, Tag, Star, ThumbsUp } from 'lucide-react';
+import { ExternalLink, Tag, Star, ThumbsUp, Eye, EyeOff } from 'lucide-react';
 
 interface GameCardProps {
   deal: GameDeal;
+  isMonitored?: boolean;
+  onToggleMonitor?: (deal: GameDeal) => void;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ deal }) => {
+export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, onToggleMonitor }) => {
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-zinc-800 transition-transform hover:-translate-y-1 hover:shadow-xl hover:border-zinc-700 flex flex-col h-full">
+    <div className="bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-zinc-800 transition-transform hover:-translate-y-1 hover:shadow-xl hover:border-zinc-700 flex flex-col h-full relative">
       <div className="relative">
         <img 
           src={deal.imageUrl} 
@@ -19,6 +21,23 @@ export const GameCard: React.FC<GameCardProps> = ({ deal }) => {
         <div className="absolute top-2 right-2 bg-emerald-500 text-black font-bold px-2 py-1 rounded-md text-sm">
           -{deal.discountPercentage}%
         </div>
+        {onToggleMonitor && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              onToggleMonitor(deal);
+            }}
+            className={`absolute top-2 left-2 p-2 rounded-full transition-colors ${
+              isMonitored 
+                ? 'bg-indigo-500 text-white hover:bg-indigo-600' 
+                : 'bg-black/50 text-zinc-300 hover:bg-black/70 hover:text-white'
+            }`}
+            aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+            title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+          >
+            {isMonitored ? <Eye size={16} /> : <EyeOff size={16} />}
+          </button>
+        )}
       </div>
       
       <div className="p-4 flex flex-col flex-grow">
@@ -58,7 +77,7 @@ export const GameCard: React.FC<GameCardProps> = ({ deal }) => {
             href={deal.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition-colors flex items-center justify-center"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition-colors flex items-center justify-center"
             aria-label={`Get deal for ${deal.title}`}
           >
             <ExternalLink size={20} />
