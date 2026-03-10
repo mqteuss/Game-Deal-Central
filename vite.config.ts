@@ -14,9 +14,9 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg'],
         manifest: {
-          name: 'CheapShark Deals',
-          short_name: 'CS Deals',
-          description: 'Encontre as melhores ofertas de jogos de PC',
+          name: 'GameDealCentral',
+          short_name: 'GameDeal',
+          description: 'As melhores ofertas de jogos de PC',
           theme_color: '#09090b',
           background_color: '#09090b',
           display: 'standalone',
