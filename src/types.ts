@@ -9,5 +9,8 @@ export interface GameDeal {
   platform: string;
   url: string;
   expiresAt?: string;
+  metacriticScore?: string;
+  steamRatingPercent?: string;
+  steamRatingText?: string | null;
 }
 

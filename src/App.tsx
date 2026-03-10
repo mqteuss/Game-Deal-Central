@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GameCard } from './components/GameCard';
-import { Frown, Loader2 } from 'lucide-react';
+import { Frown, Loader2, ArrowDownUp } from 'lucide-react';
 import { getDeals, getStores, Deal, Store as ApiStore } from './services/cheapshark';
 
 export default function App() {
@@ -10,6 +10,7 @@ export default function App() {
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'Deal Rating' | 'Title' | 'Savings' | 'Price' | 'Metacritic' | 'Reviews' | 'Release' | 'Recent'>('Deal Rating');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -70,7 +71,7 @@ export default function App() {
     setDeals([]);
     setHasMore(true);
     setError(null);
-  }, [debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice]);
+  }, [debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice, sortBy]);
 
   // Fetch deals
   useEffect(() => {
@@ -84,7 +85,7 @@ export default function App() {
           setIsLoadingMore(true);
         }
 
-        const params: any = { onSale: true, pageSize: 60, pageNumber };
+        const params: any = { onSale: true, pageSize: 60, pageNumber, sortBy };
         
         if (debouncedSearch) params.title = debouncedSearch;
         if (selectedStores.length > 0) params.storeID = selectedStores.join(',');
@@ -118,7 +119,7 @@ export default function App() {
     };
 
     fetchDeals();
-  }, [pageNumber, debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice, exchangeRate]);
+  }, [pageNumber, debouncedSearch, selectedStores, debouncedMinPrice, debouncedMaxPrice, sortBy, exchangeRate]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -184,13 +185,33 @@ export default function App() {
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <h2 className="text-2xl font-bold text-white">
                 {searchQuery ? `Resultados para "${searchQuery}"` : 'Ofertas em Destaque'}
               </h2>
-              <span className="text-zinc-400 text-sm font-medium bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
-                {deals.length} {deals.length === 1 ? 'jogo carregado' : 'jogos carregados'}
-              </span>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5">
+                  <ArrowDownUp size={16} className="text-zinc-400" />
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-transparent text-sm text-zinc-300 focus:outline-none cursor-pointer"
+                  >
+                    <option value="Deal Rating">Relevância</option>
+                    <option value="Price">Menor Preço</option>
+                    <option value="Savings">Maior Desconto</option>
+                    <option value="Metacritic">Nota Metacritic</option>
+                    <option value="Reviews">Avaliações Steam</option>
+                    <option value="Recent">Mais Recentes</option>
+                    <option value="Release">Data de Lançamento</option>
+                    <option value="Title">Ordem Alfabética</option>
+                  </select>
+                </div>
+                <span className="text-zinc-400 text-sm font-medium bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800 hidden sm:block">
+                  {deals.length} {deals.length === 1 ? 'jogo' : 'jogos'}
+                </span>
+              </div>
             </div>
 
             {isLoading && pageNumber === 0 ? (
@@ -224,7 +245,10 @@ export default function App() {
                             discountPercentage: Math.round(parseFloat(deal.savings)),
                             store: storeObj ? storeObj.name : 'Desconhecida',
                             platform: 'PC',
-                            url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`
+                            url: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`,
+                            metacriticScore: deal.metacriticScore,
+                            steamRatingPercent: deal.steamRatingPercent,
+                            steamRatingText: deal.steamRatingText
                           }} 
                         />
                       );

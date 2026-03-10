@@ -55,12 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div>
         <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">Lojas Disponíveis</h3>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
           {availableStores.map(store => (
             <div 
               key={store.id} 
               onClick={() => toggleStore(store.id)}
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-3 cursor-pointer group py-2"
             >
               <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                 selectedStores.includes(store.id) 

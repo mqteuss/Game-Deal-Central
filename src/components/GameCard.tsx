@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameDeal } from '../types';
-import { ExternalLink, Tag } from 'lucide-react';
+import { ExternalLink, Tag, Star, ThumbsUp } from 'lucide-react';
 
 interface GameCardProps {
   deal: GameDeal;
@@ -24,12 +24,24 @@ export const GameCard: React.FC<GameCardProps> = ({ deal }) => {
       <div className="p-4 flex flex-col flex-grow">
         <h3 className="text-lg font-semibold text-white mb-1 line-clamp-2">{deal.title}</h3>
         
-        <div className="flex items-center gap-2 mb-4 text-xs text-zinc-400">
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-zinc-400">
           <span className="bg-zinc-800 px-2 py-1 rounded-md">{deal.platform}</span>
           <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1">
             <Tag size={12} />
             {deal.store}
           </span>
+          {deal.metacriticScore && deal.metacriticScore !== '0' && (
+            <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1 text-yellow-500" title="Metacritic Score">
+              <Star size={12} className="fill-yellow-500" />
+              {deal.metacriticScore}
+            </span>
+          )}
+          {deal.steamRatingPercent && deal.steamRatingPercent !== '0' && (
+            <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1 text-blue-400" title={`Steam Rating: ${deal.steamRatingText}`}>
+              <ThumbsUp size={12} />
+              {deal.steamRatingPercent}%
+            </span>
+          )}
         </div>
         
         <div className="mt-auto flex items-end justify-between">
