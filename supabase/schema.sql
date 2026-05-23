@@ -124,52 +124,52 @@ alter table public.notifications enable row level security;
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
 on public.profiles for select
-using (auth.uid() = id);
+using ((select auth.uid()) = id);
 
 drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own"
 on public.profiles for insert
-with check (auth.uid() = id);
+with check ((select auth.uid()) = id);
 
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
 on public.profiles for update
-using (auth.uid() = id)
-with check (auth.uid() = id);
+using ((select auth.uid()) = id)
+with check ((select auth.uid()) = id);
 
 drop policy if exists "monitored_games_select_own" on public.monitored_games;
 create policy "monitored_games_select_own"
 on public.monitored_games for select
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 drop policy if exists "monitored_games_insert_own" on public.monitored_games;
 create policy "monitored_games_insert_own"
 on public.monitored_games for insert
-with check (auth.uid() = user_id);
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists "monitored_games_update_own" on public.monitored_games;
 create policy "monitored_games_update_own"
 on public.monitored_games for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists "monitored_games_delete_own" on public.monitored_games;
 create policy "monitored_games_delete_own"
 on public.monitored_games for delete
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 drop policy if exists "notifications_select_own" on public.notifications;
 create policy "notifications_select_own"
 on public.notifications for select
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 drop policy if exists "notifications_update_own" on public.notifications;
 create policy "notifications_update_own"
 on public.notifications for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists "notifications_delete_own" on public.notifications;
 create policy "notifications_delete_own"
 on public.notifications for delete
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
