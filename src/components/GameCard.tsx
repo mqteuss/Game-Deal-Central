@@ -14,6 +14,9 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+  const landscapeImageUrl = deal.imageUrl.includes('store_item_assets')
+    ? deal.imageUrl
+    : deal.imageUrl.replace(/capsule_231x87|capsule_sm_120/g, 'header');
 
   const formatReleaseDate = (timestamp?: number) => {
     if (!timestamp) return null;
@@ -98,7 +101,7 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
         {/* Image */}
         <div className="w-full aspect-[460/215] relative bg-black/20 rounded-t-md overflow-hidden">
           <img 
-            src={deal.imageUrl.includes('store_item_assets') ? deal.imageUrl : deal.imageUrl.replace(/capsule_231x87/g, 'header')} 
+            src={landscapeImageUrl} 
             alt={deal.title} 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
@@ -222,11 +225,11 @@ export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, o
       className="group flex items-stretch bg-zinc-900/40 hover:bg-zinc-800/60 border-b border-white/5 transition-colors relative min-h-[6rem] sm:min-h-[7rem] cursor-pointer"
     >
       {/* Image Section */}
-      <div className="w-32 sm:w-48 flex-shrink-0 relative bg-black/20">
+      <div className="w-32 sm:w-48 flex-shrink-0 self-stretch relative bg-zinc-950 overflow-hidden">
         <img 
-          src={deal.imageUrl} 
+          src={landscapeImageUrl} 
           alt={deal.title} 
-          className="w-full h-full object-contain absolute inset-0 p-1"
+          className="w-full h-full object-cover object-center absolute inset-0"
           referrerPolicy="no-referrer"
           loading="lazy"
           decoding="async"
