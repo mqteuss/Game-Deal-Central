@@ -33,8 +33,8 @@ export interface Deal {
 
 const BASE_URL = 'https://www.cheapshark.com/api/1.0';
 
-export async function getStores(): Promise<Store[]> {
-  const response = await fetch(`${BASE_URL}/stores`);
+export async function getStores(signal?: AbortSignal): Promise<Store[]> {
+  const response = await fetch(`${BASE_URL}/stores`, { signal });
   if (!response.ok) {
     throw new Error('Failed to fetch stores');
   }
@@ -51,20 +51,73 @@ export interface GetDealsParams {
   upperPrice?: number;
   title?: string;
   onSale?: boolean;
+  metacritic?: number;
+  steamRating?: number;
 }
 
-export async function getDeals(params: GetDealsParams = {}): Promise<Deal[]> {
+function serializeParam(value: string | number | boolean): string {
+  if (typeof value === 'boolean') return value ? '1' : '0';
+  return value.toString();
+}
+
+export async function getDeals(params: GetDealsParams = {}, signal?: AbortSignal): Promise<Deal[]> {
   const url = new URL(`${BASE_URL}/deals`);
   
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.append(key, value.toString());
+      url.searchParams.append(key, serializeParam(value));
     }
   });
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { signal });
   if (!response.ok) {
     throw new Error('Failed to fetch deals');
+  }
+  return response.json();
+}
+
+export interface GameDetails {
+  info: {
+    title: string;
+    steamAppID: string | null;
+    thumb: string;
+  };
+  cheapestPriceEver: {
+    price: string;
+    date: number;
+  };
+  deals: Array<{
+    storeID: string;
+    dealID: string;
+    price: string;
+    retailPrice: string;
+    savings: string;
+  }>;
+}
+
+export async function getGameDetails(gameID: string, signal?: AbortSignal): Promise<GameDetails> {
+  const response = await fetch(`${BASE_URL}/games?id=${encodeURIComponent(gameID)}`, { signal });
+  if (!response.ok) {
+    throw new Error('Failed to fetch game details');
+  }
+  return response.json();
+}
+
+export interface GameSuggestion {
+  gameID: string;
+  steamAppID: string | null;
+  cheapest: string;
+  cheapestDealID: string;
+  external: string;
+  internalName: string;
+  thumb: string;
+}
+
+export async function getGameSuggestions(title: string, signal?: AbortSignal): Promise<GameSuggestion[]> {
+  if (!title || title.trim().length === 0) return [];
+  const response = await fetch(`${BASE_URL}/games?title=${encodeURIComponent(title)}&limit=5`, { signal });
+  if (!response.ok) {
+    throw new Error('Failed to fetch game suggestions');
   }
   return response.json();
 }

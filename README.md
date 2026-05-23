@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# GameDealCentral
 
-# Run and deploy your AI Studio app
+Aplicativo Vite + React para encontrar ofertas de jogos de PC, comparar preços e salvar jogos monitorados no Supabase.
 
-This contains everything you need to run your app locally.
+## Configuração
 
-View your app in AI Studio: https://ai.studio/apps/64040a98-82d4-4f15-b810-f685ebd0f234
+1. Instale dependências:
+   ```bash
+   npm install
+   ```
 
-## Run Locally
+2. Configure as variáveis públicas do Supabase em `.env`:
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_public_key
+   ```
 
-**Prerequisites:**  Node.js
+   O app também aceita os aliases de integração da Vercel:
+   `GD_PUBLIC_SUPABASE_URL`, `GD_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `GAMEDEALBD_GD_PUBLIC_SUPABASE_URL` e
+   `GAMEDEALBD_GD_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
+3. Crie as tabelas no Supabase executando `supabase/schema.sql` no SQL Editor.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+4. Rode localmente:
+   ```bash
+   npm run dev
+   ```
+
+## Segurança
+
+Nunca coloque `service_role`, senha do Postgres, JWT secret ou `sb_secret_*` no frontend. Use apenas URL pública e publishable/anon key.

@@ -1,87 +1,343 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GameDeal } from '../types';
-import { ExternalLink, Tag, Star, ThumbsUp, Eye, EyeOff } from 'lucide-react';
+import { Tag, Star, ThumbsUp, Eye, EyeOff, Flame, Calendar, Share2, Copy, Check, MessageCircle, Send } from 'lucide-react';
 
 interface GameCardProps {
   deal: GameDeal;
   isMonitored?: boolean;
   onToggleMonitor?: (deal: GameDeal) => void;
+  onClick?: () => void;
+  layout?: 'horizontal' | 'vertical';
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, onToggleMonitor }) => {
-  return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-zinc-800 transition-transform hover:-translate-y-1 hover:shadow-xl hover:border-zinc-700 flex flex-col h-full relative">
-      <div className="relative">
-        <img 
-          src={deal.imageUrl} 
-          alt={deal.title} 
-          className="w-full h-40 object-cover"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute top-2 right-2 bg-emerald-500 text-black font-bold px-2 py-1 rounded-md text-sm">
-          -{deal.discountPercentage}%
-        </div>
-        {onToggleMonitor && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              onToggleMonitor(deal);
-            }}
-            className={`absolute top-2 left-2 p-2 rounded-full transition-colors ${
-              isMonitored 
-                ? 'bg-indigo-500 text-white hover:bg-indigo-600' 
-                : 'bg-black/50 text-zinc-300 hover:bg-black/70 hover:text-white'
-            }`}
-            aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-            title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
-          >
-            {isMonitored ? <Eye size={16} /> : <EyeOff size={16} />}
-          </button>
-        )}
-      </div>
-      
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-lg font-semibold text-white mb-1 line-clamp-2">{deal.title}</h3>
-        
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-zinc-400">
-          <span className="bg-zinc-800 px-2 py-1 rounded-md">{deal.platform}</span>
-          <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1">
-            <Tag size={12} />
-            {deal.store}
-          </span>
-          {deal.metacriticScore && deal.metacriticScore !== '0' && (
-            <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1 text-yellow-500" title="Metacritic Score">
-              <Star size={12} className="fill-yellow-500" />
-              {deal.metacriticScore}
-            </span>
+export const GameCard: React.FC<GameCardProps> = ({ deal, isMonitored = false, onToggleMonitor, onClick, layout = 'horizontal' }) => {
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  const formatReleaseDate = (timestamp?: number) => {
+    if (!timestamp) return null;
+    return new Date(timestamp * 1000).toLocaleDateString('pt-BR', { year: 'numeric', month: 'short' });
+  };
+
+  const formatPrice = (price: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+
+  // Fechar share menu ao clicar fora
+  useEffect(() => {
+    if (!showShare) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setShowShare(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showShare]);
+
+  const shareText = `🎮 ${deal.title}\n💰 ${formatPrice(deal.discountedPrice)} (-${deal.discountPercentage}%)\n🏪 ${deal.store}\n🔗 ${deal.url}`;
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(deal.url);
+      setCopied(true);
+      setTimeout(() => { setCopied(false); setShowShare(false); }, 1200);
+    } catch { /* fallback */ }
+  };
+
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer');
+    setShowShare(false);
+  };
+
+  const handleTelegram = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(deal.url)}&text=${encodeURIComponent(`🎮 ${deal.title} — ${formatPrice(deal.discountedPrice)} (-${deal.discountPercentage}%)`)}`, '_blank', 'noopener,noreferrer');
+    setShowShare(false);
+  };
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick || e.key !== 'Enter') return;
+    e.preventDefault();
+    onClick();
+  };
+
+  const ShareMenu = () => (
+    <div 
+      ref={shareRef}
+      className="absolute z-20 bottom-full mb-2 right-0 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px] animate-in fade-in"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button onClick={handleCopyLink} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+        {copied ? 'Copiado!' : 'Copiar Link'}
+      </button>
+      <button onClick={handleWhatsApp} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        <MessageCircle size={14} />
+        WhatsApp
+      </button>
+      <button onClick={handleTelegram} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+        <Send size={14} />
+        Telegram
+      </button>
+    </div>
+  );
+
+  if (layout === 'vertical') {
+    return (
+      <div 
+        onClick={onClick}
+        onKeyDown={handleCardKeyDown}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        aria-label={onClick ? `Abrir detalhes de ${deal.title}` : undefined}
+        className="bg-zinc-900/40 border border-white/5 rounded-md flex flex-col cursor-pointer hover:bg-zinc-800/60 transition-colors group relative"
+      >
+        {/* Image */}
+        <div className="w-full aspect-[460/215] relative bg-black/20 rounded-t-md overflow-hidden">
+          <img 
+            src={deal.imageUrl.includes('store_item_assets') ? deal.imageUrl : deal.imageUrl.replace(/capsule_231x87/g, 'header')} 
+            alt={deal.title} 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+          <div className="absolute top-2 right-2 bg-[#4c6b22] text-[#a3d955] text-xs font-bold px-1.5 py-1 rounded-sm shadow-lg">
+            -{deal.discountPercentage}%
+          </div>
+          {deal.dealRating && parseFloat(deal.dealRating) >= 8.0 && (
+            <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-xs font-bold px-1.5 py-1 rounded-sm shadow-lg flex items-center gap-1">
+              <Flame size={12} />
+              {deal.dealRating}
+            </div>
           )}
-          {deal.steamRatingPercent && deal.steamRatingPercent !== '0' && (
-            <span className="bg-zinc-800 px-2 py-1 rounded-md flex items-center gap-1 text-blue-400" title={`Steam Rating: ${deal.steamRatingText}`}>
-              <ThumbsUp size={12} />
-              {deal.steamRatingPercent}%
-            </span>
-          )}
         </div>
         
-        <div className="mt-auto flex items-end justify-between">
-          <div className="flex flex-col">
-            <span className="text-zinc-500 line-through text-sm">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.originalPrice)}
+        {/* Content */}
+        <div className="p-3 flex flex-col flex-1">
+          <h3 className="text-base font-medium text-zinc-200 mb-2 group-hover:text-white transition-colors">{deal.title}</h3>
+          
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            <span className="text-[10px] text-zinc-300 bg-white/5 px-1.5 py-0.5 rounded-sm border border-white/5 flex items-center gap-1.5">
+              {deal.storeIcon && <img src={deal.storeIcon} alt={deal.store} className="w-3 h-3 rounded-sm" />}
+              {deal.store}
             </span>
-            <span className="text-2xl font-bold text-emerald-400">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.discountedPrice)}
+            <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded-sm border border-white/5">
+              {deal.platform}
             </span>
           </div>
           
-          <a 
-            href={deal.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition-colors flex items-center justify-center"
-            aria-label={`Get deal for ${deal.title}`}
-          >
-            <ExternalLink size={20} />
-          </a>
+          {/* Ratings */}
+          <div className="flex flex-wrap items-center gap-3 mb-4 mt-auto">
+            {deal.metacriticScore && deal.metacriticScore !== '0' && (
+              <span className="text-xs text-yellow-500/90 flex items-center gap-1" title="Metacritic Score">
+                <Star size={12} className="fill-yellow-500/90" />
+                {deal.metacriticScore}
+              </span>
+            )}
+            {deal.steamRatingPercent && deal.steamRatingPercent !== '0' && (
+              <span className="text-xs text-blue-400/90 flex items-center gap-1" title={`${deal.steamRatingText} (${deal.steamRatingCount} reviews)`}>
+                <ThumbsUp size={12} />
+                {deal.steamRatingPercent}%
+              </span>
+            )}
+            {deal.releaseDate && (
+              <span className="text-xs text-zinc-500 flex items-center gap-1" title="Data de Lançamento">
+                <Calendar size={12} />
+                {formatReleaseDate(deal.releaseDate)}
+              </span>
+            )}
+          </div>
+          
+          {/* Bottom Row */}
+          <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
+            <div className="flex items-center gap-1">
+              {onToggleMonitor && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleMonitor(deal);
+                  }}
+                  className={`p-1.5 rounded-sm transition-colors ${
+                    isMonitored 
+                      ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
+                      : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'
+                  }`}
+                  aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+                  title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+                >
+                  {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
+              )}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowShare(!showShare);
+                  }}
+                  className="p-1.5 rounded-sm bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Compartilhar"
+                >
+                  <Share2 size={14} />
+                </button>
+                {showShare && <ShareMenu />}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-zinc-950/50 rounded-sm overflow-hidden ml-auto">
+              <div className="px-2 py-1 flex flex-col items-end justify-center">
+                <span className="text-[10px] text-zinc-500 line-through leading-none mb-0.5">
+                  {formatPrice(deal.originalPrice)}
+                </span>
+                <span className="text-sm font-medium text-[#a3d955] leading-none">
+                  {formatPrice(deal.discountedPrice)}
+                </span>
+              </div>
+              <a 
+                href={deal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="bg-[#4c6b22] hover:bg-[#5c8029] text-[#a3d955] hover:text-white text-sm font-medium px-3 py-2 transition-colors h-full flex items-center"
+              >
+                Ver Oferta
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      onClick={onClick}
+      onKeyDown={handleCardKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `Abrir detalhes de ${deal.title}` : undefined}
+      className="group flex items-stretch bg-zinc-900/40 hover:bg-zinc-800/60 border-b border-white/5 transition-colors relative min-h-[6rem] sm:min-h-[7rem] cursor-pointer"
+    >
+      {/* Image Section */}
+      <div className="w-32 sm:w-48 flex-shrink-0 relative bg-black/20">
+        <img 
+          src={deal.imageUrl} 
+          alt={deal.title} 
+          className="w-full h-full object-contain absolute inset-0 p-1"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          decoding="async"
+        />
+        {/* Share & Monitor buttons */}
+        <div className="absolute bottom-1 left-1 flex gap-1 z-10">
+          {onToggleMonitor && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleMonitor(deal);
+              }}
+              className={`p-1.5 rounded-sm backdrop-blur-md transition-colors ${
+                isMonitored 
+                  ? 'bg-indigo-500/80 text-white hover:bg-indigo-600' 
+                  : 'bg-black/40 text-white/70 hover:bg-black/60 hover:text-white'
+              }`}
+              aria-label={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+              title={isMonitored ? "Parar de monitorar" : "Monitorar jogo"}
+            >
+              {isMonitored ? <Eye size={14} /> : <EyeOff size={14} />}
+            </button>
+          )}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowShare(!showShare);
+              }}
+              className="p-1.5 rounded-sm backdrop-blur-md bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-colors"
+              title="Compartilhar"
+            >
+              <Share2 size={14} />
+            </button>
+            {showShare && (
+            <div 
+              ref={shareRef}
+              className="absolute z-20 bottom-8 left-1 bg-zinc-800 border border-white/10 rounded-lg shadow-xl shadow-black/40 py-1 min-w-[160px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button onClick={handleCopyLink} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                {copied ? 'Copiado!' : 'Copiar Link'}
+              </button>
+              <button onClick={handleWhatsApp} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                <MessageCircle size={14} />
+                WhatsApp
+              </button>
+              <button onClick={handleTelegram} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                <Send size={14} />
+                Telegram
+              </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Content Section */}
+      <div className="flex flex-1 p-2 sm:p-3 overflow-hidden gap-2">
+        {/* Left: Title and Tags */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <h3 className="text-sm sm:text-base font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors mb-2">
+            {deal.title}
+          </h3>
+          
+          <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+            <span className="text-[10px] sm:text-xs text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded-sm">
+              {deal.platform}
+            </span>
+            <span className="text-[10px] sm:text-xs text-zinc-300 bg-white/5 px-1.5 py-0.5 rounded-sm flex items-center gap-1.5">
+              {deal.storeIcon && <img src={deal.storeIcon} alt={deal.store} className="w-3 h-3 rounded-sm" />}
+              {deal.store}
+            </span>
+            {deal.dealRating && parseFloat(deal.dealRating) >= 8.0 && (
+              <span className="text-[10px] sm:text-xs text-orange-500/90 bg-orange-500/10 px-1.5 py-0.5 rounded-sm flex items-center gap-1" title="Deal Rating">
+                <Flame size={10} />
+                {deal.dealRating}
+              </span>
+            )}
+            {deal.metacriticScore && deal.metacriticScore !== '0' && (
+              <span className="text-[10px] sm:text-xs text-yellow-500/90 bg-yellow-500/10 px-1.5 py-0.5 rounded-sm flex items-center gap-1" title="Metacritic Score">
+                <Star size={10} className="fill-yellow-500/90" />
+                {deal.metacriticScore}
+              </span>
+            )}
+            {deal.steamRatingPercent && deal.steamRatingPercent !== '0' && (
+              <span className="text-[10px] sm:text-xs text-blue-400/90 bg-blue-400/10 px-1.5 py-0.5 rounded-sm flex items-center gap-1" title={`${deal.steamRatingText} (${deal.steamRatingCount} reviews)`}>
+                <ThumbsUp size={10} />
+                {deal.steamRatingPercent}%
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {/* Right: Price Info */}
+        <div className="flex flex-col items-end justify-between flex-shrink-0 ml-1 sm:ml-2">
+          <div className="bg-[#4c6b22] text-[#a3d955] text-xs sm:text-sm font-bold px-1.5 py-1 rounded-sm">
+            -{deal.discountPercentage}%
+          </div>
+          
+          <div className="flex flex-col items-end mt-2">
+            <span className="text-[10px] sm:text-xs text-zinc-500 line-through leading-none mb-1">
+              {formatPrice(deal.originalPrice)}
+            </span>
+            <span className="text-sm sm:text-base font-medium text-[#a3d955] leading-none">
+              {formatPrice(deal.discountedPrice)}
+            </span>
+          </div>
         </div>
       </div>
     </div>
