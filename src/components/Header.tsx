@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Gamepad2, Menu, Sun, Moon, LayoutGrid, List, User, LogOut } from 'lucide-react';
+import { Search, Gamepad2, Menu, Sun, Moon, LayoutGrid, List, User, LogOut, Bell, CheckCheck, TrendingDown, ExternalLink } from 'lucide-react';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { AppNotification } from '../types';
 
 interface HeaderProps {
   searchQuery: string;
@@ -10,6 +11,9 @@ interface HeaderProps {
   showMonitoredOnly: boolean;
   setShowMonitoredOnly: (val: boolean) => void;
   monitoredCount: number;
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  onMarkNotificationsRead: () => void;
   openAuthModal: (mode: 'login' | 'register') => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
@@ -21,18 +25,35 @@ export const Header: React.FC<HeaderProps> = ({
   showMonitoredOnly,
   setShowMonitoredOnly,
   monitoredCount,
+  notifications,
+  unreadNotificationsCount,
+  onMarkNotificationsRead,
   openAuthModal,
   searchInputRef
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const { theme, toggleTheme, viewMode, toggleViewMode } = useAppSettings();
   const { user, profile, signOut } = useAuth();
 
   // Display name: profile username > email prefix > 'Usuário'
   const displayName = profile?.username || user?.email?.split('@')[0] || 'Usuário';
+
+  const formatNotificationPrice = (price: number | null) => {
+    if (price === null) return '';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+  };
+
+  const formatNotificationDate = (value: string) => {
+    return new Date(value).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+    });
+  };
 
   // Refs para medir posição real dos botões de tab
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +69,9 @@ export const Header: React.FC<HeaderProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
+      }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -166,6 +190,93 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+
+              {user && (
+                <div className="relative" ref={notificationMenuRef}>
+                  <button
+                    onClick={() => setShowNotifications(prev => !prev)}
+                    className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                    title="Notificações"
+                    aria-label={`Notificações${unreadNotificationsCount > 0 ? ` (${unreadNotificationsCount} não lidas)` : ''}`}
+                  >
+                    <Bell size={18} />
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-4 h-4 rounded-full bg-emerald-500 text-black text-[10px] font-bold flex items-center justify-center px-1">
+                        {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl bg-zinc-900 border border-white/10 shadow-xl overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Notificações</p>
+                          <p className="text-xs text-zinc-500">
+                            {unreadNotificationsCount > 0
+                              ? `${unreadNotificationsCount} alerta${unreadNotificationsCount === 1 ? '' : 's'} novo${unreadNotificationsCount === 1 ? '' : 's'}`
+                              : 'Tudo em dia'}
+                          </p>
+                        </div>
+                        {unreadNotificationsCount > 0 && (
+                          <button
+                            onClick={onMarkNotificationsRead}
+                            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                            title="Marcar como lidas"
+                          >
+                            <CheckCheck size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.map(notification => (
+                            <a
+                              key={notification.id}
+                              href={notification.url || '#'}
+                              target={notification.url ? '_blank' : undefined}
+                              rel={notification.url ? 'noopener noreferrer' : undefined}
+                              className={`flex gap-3 px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                                notification.is_read ? 'bg-transparent' : 'bg-emerald-500/5'
+                              }`}
+                            >
+                              <div className="mt-0.5 h-8 w-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                                <TrendingDown size={15} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm font-medium text-white line-clamp-1">{notification.title}</p>
+                                  {!notification.is_read && (
+                                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{notification.message}</p>
+                                <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-zinc-500">
+                                  <span>
+                                    {formatNotificationPrice(notification.old_price)}
+                                    {notification.old_price !== null && notification.new_price !== null ? ' → ' : ''}
+                                    <span className="text-emerald-400">{formatNotificationPrice(notification.new_price)}</span>
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    {formatNotificationDate(notification.created_at)}
+                                    {notification.url && <ExternalLink size={11} />}
+                                  </span>
+                                </div>
+                              </div>
+                            </a>
+                          ))
+                        ) : (
+                          <div className="px-4 py-8 text-center">
+                            <p className="text-sm text-zinc-400">Nenhuma queda de preço ainda.</p>
+                            <p className="text-xs text-zinc-500 mt-1">Quando um monitorado baixar, aparece aqui.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Auth Section */}
               <div className="flex items-center gap-2 ml-2">

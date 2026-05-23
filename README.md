@@ -27,6 +27,25 @@ Aplicativo Vite + React para encontrar ofertas de jogos de PC, comparar preços 
    npm run dev
    ```
 
+## Notificações e Cron
+
+O projeto inclui um Vercel Cron diário em `vercel.json` que chama:
+
+```txt
+/api/check-price-alerts
+```
+
+Configure estas variáveis server-side na Vercel:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+CRON_SECRET=use_a_long_random_secret
+CRON_MAX_DEALS=80
+```
+
+O cron verifica os jogos monitorados, busca o preço atual na CheapShark, atualiza `monitored_games` e cria registros em `notifications` quando houver queda de preço.
+
 ## Segurança
 
 Nunca coloque `service_role`, senha do Postgres, JWT secret ou `sb_secret_*` no frontend. Use apenas URL pública e publishable/anon key.

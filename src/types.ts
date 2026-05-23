@@ -19,3 +19,20 @@ export interface GameDeal {
   dealRating?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  deal_id: string;
+  game_id: string | null;
+  title: string;
+  message: string;
+  type: 'price_drop';
+  old_price: number | null;
+  new_price: number | null;
+  discount_percentage: number | null;
+  store: string | null;
+  store_icon: string | null;
+  url: string | null;
+  is_read: boolean;
+  created_at: string;
+}

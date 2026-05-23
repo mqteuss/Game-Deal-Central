@@ -9,7 +9,7 @@ import { OnboardingTour } from './components/OnboardingTour';
 import { useToast } from './components/Toast';
 import { AlertTriangle, Frown, Loader2, SearchX, Ghost } from 'lucide-react';
 import { getDeals, getStores, Deal, GetDealsParams, Store as ApiStore } from './services/cheapshark';
-import { GameDeal } from './types';
+import { AppNotification, GameDeal } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameModal } from './components/GameModal';
 import { AuthModal } from './components/AuthModal';
@@ -56,13 +56,62 @@ export default function App() {
   const monitoredObserverRef = useRef<HTMLDivElement>(null);
 
   const [monitoredGames, setMonitoredGames] = useState<GameDeal[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [showMonitoredOnly, setShowMonitoredOnly] = useState(false);
   const [monitoredVisibleCount, setMonitoredVisibleCount] = useState(20);
 
   // O(1) lookup para saber se um deal está monitorado
   const monitoredIds = useMemo(() => new Set(monitoredGames.map(g => g.id)), [monitoredGames]);
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter(notification => !notification.is_read).length,
+    [notifications],
+  );
 
   const [selectedGame, setSelectedGame] = useState<GameDeal | null>(null);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!user || !supabase) {
+        setNotifications([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Failed to load notifications:', error);
+        return;
+      }
+
+      setNotifications((data || []) as AppNotification[]);
+    };
+
+    loadNotifications();
+  }, [user]);
+
+  const markNotificationsRead = useCallback(async () => {
+    if (!user || !supabase || unreadNotificationsCount === 0) return;
+
+    const previousNotifications = notifications;
+    setNotifications(prev => prev.map(notification => ({ ...notification, is_read: true })));
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Failed to mark notifications as read:', error);
+      setNotifications(previousNotifications);
+      toast('Erro ao marcar notificações como lidas', 'error');
+    }
+  }, [notifications, toast, unreadNotificationsCount, user]);
 
   // Load monitored games from Supabase
   useEffect(() => {
@@ -513,6 +562,9 @@ export default function App() {
         showMonitoredOnly={showMonitoredOnly}
         setShowMonitoredOnly={setShowMonitoredOnly}
         monitoredCount={monitoredGames.length}
+        notifications={notifications}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onMarkNotificationsRead={markNotificationsRead}
         openAuthModal={(mode) => {
           setAuthModalMode(mode);
           setIsAuthModalOpen(true);

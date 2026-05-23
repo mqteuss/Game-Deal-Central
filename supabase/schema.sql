@@ -36,11 +36,37 @@ create table if not exists public.monitored_games (
   constraint monitored_games_user_deal_unique unique (user_id, deal_id)
 );
 
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  deal_id text not null,
+  game_id text,
+  title text not null,
+  message text not null,
+  type text not null default 'price_drop',
+  old_price numeric(10,2),
+  new_price numeric(10,2),
+  discount_percentage integer,
+  store text,
+  store_icon text,
+  url text,
+  is_read boolean not null default false,
+  dedupe_key text not null unique,
+  created_at timestamptz not null default now(),
+  constraint notifications_type_check check (type in ('price_drop'))
+);
+
 create index if not exists monitored_games_user_id_idx
   on public.monitored_games(user_id);
 
 create index if not exists monitored_games_added_at_idx
   on public.monitored_games(user_id, added_at desc);
+
+create index if not exists notifications_user_created_at_idx
+  on public.notifications(user_id, created_at desc);
+
+create index if not exists notifications_user_unread_idx
+  on public.notifications(user_id, is_read, created_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -93,6 +119,7 @@ for each row execute function public.handle_new_user();
 
 alter table public.profiles enable row level security;
 alter table public.monitored_games enable row level security;
+alter table public.notifications enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
@@ -129,4 +156,20 @@ with check (auth.uid() = user_id);
 drop policy if exists "monitored_games_delete_own" on public.monitored_games;
 create policy "monitored_games_delete_own"
 on public.monitored_games for delete
+using (auth.uid() = user_id);
+
+drop policy if exists "notifications_select_own" on public.notifications;
+create policy "notifications_select_own"
+on public.notifications for select
+using (auth.uid() = user_id);
+
+drop policy if exists "notifications_update_own" on public.notifications;
+create policy "notifications_update_own"
+on public.notifications for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "notifications_delete_own" on public.notifications;
+create policy "notifications_delete_own"
+on public.notifications for delete
 using (auth.uid() = user_id);
