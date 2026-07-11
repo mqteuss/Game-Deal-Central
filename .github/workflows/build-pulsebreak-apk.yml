@@ -1,9 +1,6 @@
 name: Probe PULSEBREAK Runtime
 
 on:
-  push:
-    branches:
-      - pulsebreak-runtime-probe
   pull_request:
     branches:
       - main
@@ -34,35 +31,7 @@ jobs:
           echo "a79cde26cfb493d4b659d7ec8a067ad0743845b3ae3d19543cee7e9200fe6ba6  /tmp/pulsebreak_project.tar.gz" | sha256sum -c -
           tar -xzf /tmp/pulsebreak_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("godot-game/main.gd")
-          text = path.read_text(encoding="utf-8")
-          start = text.index("var upgrades := [")
-          marker = "\n\nfunc _ready() -> void:"
-          end = text.index(marker, start)
-          replacement = '''var upgrades: Array[Dictionary] = []
-
-func make_upgrade(id: String, title: String, description: String, tint: Color) -> Dictionary:
-	return {"id": id, "title": title, "desc": description, "color": tint}
-
-func setup_upgrades() -> void:
-	upgrades.clear()
-	upgrades.append(make_upgrade("damage", "NÚCLEO OFENSIVO", "+24% de dano dos projéteis", RED))
-	upgrades.append(make_upgrade("firerate", "CADÊNCIA VETORIAL", "Dispara 17% mais rápido", CYAN))
-	upgrades.append(make_upgrade("speed", "IMPULSO CINÉTICO", "+12% de velocidade", GREEN))
-	upgrades.append(make_upgrade("maxhp", "BLINDAGEM VIVA", "+25 de vida máxima e cura 25", ORANGE))
-	upgrades.append(make_upgrade("multishot", "FEIXE DUPLO", "Adiciona um projétil lateral", PURPLE))
-	upgrades.append(make_upgrade("pierce", "MUNIÇÃO FÁSICA", "Projéteis atravessam +1 alvo", YELLOW))
-	upgrades.append(make_upgrade("pulse", "RESSONÂNCIA", "Pulso maior, forte e mais frequente", CYAN_SOFT))
-	upgrades.append(make_upgrade("dash", "RUPTURA", "Dash recarrega mais rápido", WHITE))
-	upgrades.append(make_upgrade("magnet", "CAMPO COLETOR", "+45 de alcance para coletar XP", GREEN))
-	upgrades.append(make_upgrade("armor", "MALHA REATIVA", "-10% de dano recebido", MUTED))
-	upgrades.append(make_upgrade("regen", "RECUPERAÇÃO", "Regenera 1,2 de vida por segundo", GREEN))'''
-          text = text[:start] + replacement + text[end:]
-          text = text.replace("\trng.randomize()\n", "\trng.randomize()\n\tsetup_upgrades()\n", 1)
-          path.write_text(text, encoding="utf-8")
-          PY
+          python3 pulsebreak-ci/apply_fix.py
           nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,150p' | tee pulsebreak-ci/source_excerpt.log
 
       - name: Configure Godot
