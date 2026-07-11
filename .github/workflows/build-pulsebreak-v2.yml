@@ -82,6 +82,22 @@ jobs:
             exit 1
           fi
 
+      - name: Capture landscape UI screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v xvfb-run
+          mkdir -p pulsebreak-v2/screenshots
+          cd "$PROJECT_PATH"
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --script ../pulsebreak-v2/screenshot_probe.gd --rendering-method gl_compatibility 2>&1 | tee ../pulsebreak-v2/visual.log
+          grep -q "PULSEBREAK_V2_VISUAL_PROBE_OK" ../pulsebreak-v2/visual.log
+          test -s ../pulsebreak-v2/screenshots/01-menu-landscape.png
+          test -s ../pulsebreak-v2/screenshots/02-gameplay-landscape.png
+          test -s ../pulsebreak-v2/screenshots/03-settings-landscape.png
+          if grep -E "SCRIPT ERROR|ERROR: Failed to load script|PULSEBREAK_V2_SCREENSHOT_" ../pulsebreak-v2/visual.log; then
+            exit 1
+          fi
+
       - name: Export Android APK
         shell: bash
         run: |
@@ -120,6 +136,14 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload visual validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-v2-Landscape-Screenshots
+          path: pulsebreak-v2/screenshots/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -128,6 +152,7 @@ jobs:
           path: |
             pulsebreak-v2/import.log
             pulsebreak-v2/runtime.log
+            pulsebreak-v2/visual.log
             pulsebreak-v2/export.log
             pulsebreak-v2/apk-integrity.log
             pulsebreak-v2/source-integrity.log
