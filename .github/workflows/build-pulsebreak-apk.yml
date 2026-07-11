@@ -67,9 +67,10 @@ jobs:
           ' "$PROJECT_PATH/main.gd" > "$PROJECT_PATH/main.gd.fixed"
           mv "$PROJECT_PATH/main.gd.fixed" "$PROJECT_PATH/main.gd"
           sed -i '/^[[:space:]]*rng.randomize()$/a\	setup_upgrades()' "$PROJECT_PATH/main.gd"
+          bash pulsebreak-ci/apply_type_fixes.sh
           grep -q '^var upgrades: Array\[Dictionary\] = \[\]$' "$PROJECT_PATH/main.gd"
           grep -q $'^\tsetup_upgrades()$' "$PROJECT_PATH/main.gd"
-          nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,150p' | tee pulsebreak-ci/source_excerpt.log
+          nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,175p' | tee pulsebreak-ci/source_excerpt.log
 
       - name: Configure Godot
         shell: bash
