@@ -26,4 +26,4 @@ func setup_upgrades() -> void:
 text = text[:start] + replacement + text[end:]
 text = text.replace("\trng.randomize()\n", "\trng.randomize()\n\tsetup_upgrades()\n", 1)
 path.write_text(text, encoding="utf-8")
-print("PULSEBREAK_SOURCE_PATCHED")
+print("PULSEBREAK_SOURCE_PATCHED_AND_READY")
