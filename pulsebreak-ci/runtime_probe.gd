@@ -1,5 +1,6 @@
 extends SceneTree
 
+# Executes the actual main scene long enough to expose parse and runtime failures.
 var frame_count := 0
 var instance: Node
 
