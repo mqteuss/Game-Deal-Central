@@ -1,0 +1,66 @@
+name: Capture PULSEBREAK v2 Landscape UI
+
+on:
+  push:
+    branches:
+      - pulsebreak-v2-landscape
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    name: Render landscape interface screenshots
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore corrected project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat pulsebreak-v2/bundle/part_* > /tmp/pulsebreak_v2_project.tar.gz.b64
+          echo "63bd7fcadc2c50a4c88ea879b7b3d1ccb8ee7599ed17d0e433cfc5dfb4d5319b  /tmp/pulsebreak_v2_project.tar.gz.b64" | sha256sum -c -
+          base64 --decode /tmp/pulsebreak_v2_project.tar.gz.b64 > /tmp/pulsebreak_v2_project.tar.gz
+          echo "eef9046874dd823fb0f6d712f75417280298c559edc567cb1353f1bd64548fc8  /tmp/pulsebreak_v2_project.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/pulsebreak_v2_project.tar.gz
+          sed -i \
+            -e 's/var start_x := floor(top_left.x \/ spacing) \* spacing/var start_x: float = floorf(top_left.x \/ spacing) * spacing/' \
+            -e 's/var start_y := floor(top_left.y \/ spacing) \* spacing/var start_y: float = floorf(top_left.y \/ spacing) * spacing/' \
+            godot-game/main.gd
+
+      - name: Install virtual display dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth libfontconfig1 libgl1-mesa-dri
+
+      - name: Render menu gameplay and settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pulsebreak-v2/screenshots
+          cd godot-game
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --script ../pulsebreak-v2/screenshot_probe.gd --rendering-method gl_compatibility 2>&1 | tee ../pulsebreak-v2/visual.log
+          grep -q "PULSEBREAK_V2_VISUAL_PROBE_OK" ../pulsebreak-v2/visual.log
+          test -s ../pulsebreak-v2/screenshots/01-menu-landscape.png
+          test -s ../pulsebreak-v2/screenshots/02-gameplay-landscape.png
+          test -s ../pulsebreak-v2/screenshots/03-settings-landscape.png
+          file ../pulsebreak-v2/screenshots/*.png | tee ../pulsebreak-v2/screenshots.log
+
+      - name: Upload rendered validation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-v2-Landscape-Screenshots
+          path: |
+            pulsebreak-v2/screenshots/
+            pulsebreak-v2/visual.log
+            pulsebreak-v2/screenshots.log
+          if-no-files-found: warn
+          retention-days: 30
