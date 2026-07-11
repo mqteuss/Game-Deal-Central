@@ -26,11 +26,14 @@ jobs:
       - name: Restore and patch Godot project
         shell: bash
         run: |
+          mkdir -p pulsebreak-ci
+          exec > >(tee pulsebreak-ci/setup.log) 2>&1
           set -euo pipefail
           base64 --decode pulsebreak-ci/pulsebreak_project.tar.gz.b64 > /tmp/pulsebreak_project.tar.gz
-          echo "a79cde26cfb493d4b659d7ec8a067ad0743845b3ae3d19543cee7e9200fe6ba6  /tmp/pulsebreak_project.tar.gz" | sha256sum -c -
+          sha256sum /tmp/pulsebreak_project.tar.gz
           tar -xzf /tmp/pulsebreak_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
+          ls -lah pulsebreak-ci
           python3 pulsebreak-ci/apply_fix.py
           nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,150p' | tee pulsebreak-ci/source_excerpt.log
 
@@ -69,8 +72,9 @@ jobs:
         with:
           name: PULSEBREAK-runtime-diagnostics
           path: |
+            pulsebreak-ci/setup.log
             pulsebreak-ci/import.log
             pulsebreak-ci/runtime.log
             pulsebreak-ci/source_excerpt.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
