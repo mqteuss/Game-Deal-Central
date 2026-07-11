@@ -1,9 +1,9 @@
-name: Build PULSEBREAK APK
+name: Probe PULSEBREAK Runtime
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - pulsebreak-runtime-probe
   workflow_dispatch:
 
 permissions:
@@ -12,11 +12,10 @@ permissions:
 env:
   GODOT_VERSION: "4.7"
   PROJECT_PATH: godot-game
-  EXPORT_NAME: PULSEBREAK-debug
 
 jobs:
-  android:
-    name: Validate and export Android APK
+  runtime:
+    name: Execute game runtime probe
     runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.7
@@ -33,7 +32,7 @@ jobs:
           tar -xzf /tmp/pulsebreak_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
 
-      - name: Configure Godot templates
+      - name: Configure Godot
         shell: bash
         run: |
           set -euo pipefail
@@ -44,35 +43,31 @@ jobs:
           fi
           godot --version
 
-      - name: Import and validate project
+      - name: Import project
         shell: bash
         run: |
           set -euo pipefail
           cd "$PROJECT_PATH"
-          godot --headless --editor --path . --quit-after 3
+          godot --headless --editor --path . --quit-after 3 2>&1 | tee ../pulsebreak-ci/import.log
 
-      - name: Export debug APK
+      - name: Run main scene probe
         shell: bash
         run: |
-          set -uo pipefail
-          mkdir -p build/android
-          EXPORT_DIR="$(readlink -f build/android)"
+          set -euo pipefail
           cd "$PROJECT_PATH"
-          set +e
-          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk" 2>&1 | tee "$EXPORT_DIR/export.log"
-          EXPORT_STATUS=${PIPESTATUS[0]}
-          set -e
-          if [ -s "$EXPORT_DIR/${EXPORT_NAME}.apk" ]; then
-            sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
+          godot --headless --path . --script ../pulsebreak-ci/runtime_probe.gd 2>&1 | tee ../pulsebreak-ci/runtime.log
+          grep -q "PULSEBREAK_PROBE_OK" ../pulsebreak-ci/runtime.log
+          if grep -E "SCRIPT ERROR|ERROR:" ../pulsebreak-ci/runtime.log; then
+            exit 1
           fi
-          ls -lah "$EXPORT_DIR"
-          exit "$EXPORT_STATUS"
 
-      - name: Upload APK and diagnostics
+      - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PULSEBREAK-Android-APK
-          path: build/android/
+          name: PULSEBREAK-runtime-diagnostics
+          path: |
+            pulsebreak-ci/import.log
+            pulsebreak-ci/runtime.log
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
