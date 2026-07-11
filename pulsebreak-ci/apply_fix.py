@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Repair the class-level upgrade initializer that Godot 4.7 rejects at runtime.
 path = Path("godot-game/main.gd")
 text = path.read_text(encoding="utf-8")
 start = text.index("var upgrades := [")
