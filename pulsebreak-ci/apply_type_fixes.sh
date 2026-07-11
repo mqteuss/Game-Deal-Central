@@ -15,6 +15,7 @@ sed -i \
   -e 's/var remove := bullet.life <= 0.0/var remove: bool = bullet.life <= 0.0/' \
   -e 's/var final_damage := amount \* (1.0 - clamp(armor, 0.0, 0.55))/var final_damage: float = amount * (1.0 - clampf(armor, 0.0, 0.55))/' \
   -e 's/var bonus := 1.0 + min(combo, 25) \* 0.035/var bonus: float = 1.0 + mini(combo, 25) * 0.035/' \
+  -e 's/var width := min(330.0, (view_size.x - 120.0 - gap \* 2.0) \/ 3.0)/var width: float = minf(330.0, (view_size.x - 120.0 - gap * 2.0) \/ 3.0)/' \
   -e 's/var total := width \* 3.0 + gap \* 2.0/var total: float = width * 3.0 + gap * 2.0/' \
   -e 's/var x := (view_size.x - total) \* 0.5/var x: float = (view_size.x - total) * 0.5/' \
   -e 's/var t := 1.0 - pulse_visual \/ 0.38/var t: float = 1.0 - pulse_visual \/ 0.38/' \
