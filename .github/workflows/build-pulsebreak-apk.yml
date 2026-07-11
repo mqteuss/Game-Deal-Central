@@ -1,0 +1,72 @@
+name: Build PULSEBREAK APK
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7"
+  PROJECT_PATH: godot-game
+  EXPORT_NAME: PULSEBREAK-debug
+
+jobs:
+  android:
+    name: Validate and export Android APK
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode pulsebreak-ci/pulsebreak_project.tar.gz.b64 > /tmp/pulsebreak_project.tar.gz
+          echo "b5c8b7d76e16b2032560dbe9f5a208347d6c0c68942d0512ed15a76e45a08067  /tmp/pulsebreak_project.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/pulsebreak_project.tar.gz
+          test -f "$PROJECT_PATH/project.godot"
+
+      - name: Configure Godot templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates" "$HOME/.config"
+          cp -a "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          if [ -d /root/.config/godot ]; then
+            cp -a /root/.config/godot "$HOME/.config/godot"
+          fi
+          godot --version
+
+      - name: Import and validate project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_PATH"
+          godot --headless --editor --path . --quit-after 3
+
+      - name: Export debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/android
+          EXPORT_DIR="$(readlink -f build/android)"
+          cd "$PROJECT_PATH"
+          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk"
+          test -s "$EXPORT_DIR/${EXPORT_NAME}.apk"
+          sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
+          ls -lh "$EXPORT_DIR"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-Android-APK
+          path: build/android/
+          if-no-files-found: error
+          retention-days: 30
