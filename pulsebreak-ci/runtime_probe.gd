@@ -1,6 +1,7 @@
 extends SceneTree
 
 # Executes the actual main scene long enough to expose parse and runtime failures.
+# A successful probe requires the scripted root node to survive 120 frames.
 var frame_count := 0
 var instance: Node
 
