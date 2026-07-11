@@ -54,16 +54,22 @@ jobs:
       - name: Export debug APK
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p build/android
           EXPORT_DIR="$(readlink -f build/android)"
           cd "$PROJECT_PATH"
-          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk"
-          test -s "$EXPORT_DIR/${EXPORT_NAME}.apk"
-          sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
-          ls -lh "$EXPORT_DIR"
+          set +e
+          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk" 2>&1 | tee "$EXPORT_DIR/export.log"
+          EXPORT_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ -s "$EXPORT_DIR/${EXPORT_NAME}.apk" ]; then
+            sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
+          fi
+          ls -lah "$EXPORT_DIR"
+          exit "$EXPORT_STATUS"
 
-      - name: Upload APK
+      - name: Upload APK and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: PULSEBREAK-Android-APK
