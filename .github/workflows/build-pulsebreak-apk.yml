@@ -1,9 +1,6 @@
 name: Build PULSEBREAK APK
 
 on:
-  push:
-    branches:
-      - pulsebreak-godot-build
   pull_request:
     branches:
       - main
