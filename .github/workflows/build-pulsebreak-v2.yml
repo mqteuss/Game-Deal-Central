@@ -31,7 +31,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode pulsebreak-v2/pulsebreak_project.tar.gz.b64 > /tmp/pulsebreak_v2_project.tar.gz
+          cat pulsebreak-v2/bundle/part_* > /tmp/pulsebreak_v2_project.tar.gz.b64
+          echo "63bd7fcadc2c50a4c88ea879b7b3d1ccb8ee7599ed17d0e433cfc5dfb4d5319b  /tmp/pulsebreak_v2_project.tar.gz.b64" | sha256sum -c -
+          base64 --decode /tmp/pulsebreak_v2_project.tar.gz.b64 > /tmp/pulsebreak_v2_project.tar.gz
           echo "eef9046874dd823fb0f6d712f75417280298c559edc567cb1353f1bd64548fc8  /tmp/pulsebreak_v2_project.tar.gz" | sha256sum -c -
           tar -xzf /tmp/pulsebreak_v2_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
