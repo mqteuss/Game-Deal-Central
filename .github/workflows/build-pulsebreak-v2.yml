@@ -1,0 +1,125 @@
+name: Build PULSEBREAK v2 Landscape
+
+on:
+  push:
+    branches:
+      - pulsebreak-v2-landscape
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7"
+  PROJECT_PATH: godot-game
+  EXPORT_NAME: PULSEBREAK-v2-Landscape
+
+jobs:
+  android:
+    name: Validate landscape runtime and export APK
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore project bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode pulsebreak-v2/pulsebreak_project.tar.gz.b64 > /tmp/pulsebreak_v2_project.tar.gz
+          echo "eef9046874dd823fb0f6d712f75417280298c559edc567cb1353f1bd64548fc8  /tmp/pulsebreak_v2_project.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/pulsebreak_v2_project.tar.gz
+          test -f "$PROJECT_PATH/project.godot"
+          test -f "$PROJECT_PATH/main.gd"
+          grep -q 'handheld/orientation=0' "$PROJECT_PATH/project.godot"
+          grep -q 'size/viewport_width=1280' "$PROJECT_PATH/project.godot"
+          grep -q 'size/viewport_height=720' "$PROJECT_PATH/project.godot"
+
+      - name: Configure Godot templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates" "$HOME/.config"
+          cp -a "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          if [ -d /root/.config/godot ]; then
+            cp -a /root/.config/godot "$HOME/.config/godot"
+          fi
+          godot --version
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_PATH"
+          godot --headless --editor --path . --quit-after 4 2>&1 | tee ../pulsebreak-v2/import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" ../pulsebreak-v2/import.log; then
+            exit 1
+          fi
+
+      - name: Execute gameplay probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_PATH"
+          godot --headless --path . --script ../pulsebreak-v2/runtime_probe.gd 2>&1 | tee ../pulsebreak-v2/runtime.log
+          grep -q "PULSEBREAK_V2_PROBE_OK" ../pulsebreak-v2/runtime.log
+          if grep -E "SCRIPT ERROR|ERROR: Failed to load script|PULSEBREAK_V2_.*FAILED|PULSEBREAK_V2_.*MISSING|PULSEBREAK_V2_WORLD_TOO_EMPTY" ../pulsebreak-v2/runtime.log; then
+            exit 1
+          fi
+
+      - name: Export Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/android
+          EXPORT_DIR="$(readlink -f build/android)"
+          cd "$PROJECT_PATH"
+          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk" 2>&1 | tee ../pulsebreak-v2/export.log
+          test -s "$EXPORT_DIR/${EXPORT_NAME}.apk"
+          unzip -t "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee ../pulsebreak-v2/apk-integrity.log
+          sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
+
+      - name: Package validated source
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -qr build/PULSEBREAK-v2-Landscape-Godot-Project.zip "$PROJECT_PATH" README.md
+          unzip -t build/PULSEBREAK-v2-Landscape-Godot-Project.zip | tee pulsebreak-v2/source-integrity.log
+          sha256sum build/PULSEBREAK-v2-Landscape-Godot-Project.zip > build/PULSEBREAK-v2-Landscape-Godot-Project.zip.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-v2-Landscape-APK
+          path: build/android/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload validated source
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-v2-Landscape-Source
+          path: |
+            build/PULSEBREAK-v2-Landscape-Godot-Project.zip
+            build/PULSEBREAK-v2-Landscape-Godot-Project.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-v2-Landscape-Diagnostics
+          path: |
+            pulsebreak-v2/import.log
+            pulsebreak-v2/runtime.log
+            pulsebreak-v2/export.log
+            pulsebreak-v2/apk-integrity.log
+            pulsebreak-v2/source-integrity.log
+          if-no-files-found: warn
+          retention-days: 7
