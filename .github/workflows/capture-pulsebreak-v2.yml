@@ -41,7 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb xauth libfontconfig1 libgl1-mesa-dri
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            xvfb xauth libfontconfig1 libgl1-mesa-dri libgl1 \
+            libxcursor1 libxinerama1 libxi6 libxrandr2 libxrender1 libxext6 libxfixes3
 
       - name: Render menu gameplay and settings
         shell: bash
@@ -49,7 +51,7 @@ jobs:
           set -euo pipefail
           mkdir -p pulsebreak-v2/screenshots
           cd godot-game
-          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --script ../pulsebreak-v2/screenshot_probe.gd --rendering-method gl_compatibility 2>&1 | tee ../pulsebreak-v2/visual.log
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --display-driver x11 --path . --script ../pulsebreak-v2/screenshot_probe.gd --rendering-method gl_compatibility 2>&1 | tee ../pulsebreak-v2/visual.log
           grep -q "PULSEBREAK_V2_VISUAL_PROBE_OK" ../pulsebreak-v2/visual.log
           test -s ../pulsebreak-v2/screenshots/01-menu-landscape.png
           test -s ../pulsebreak-v2/screenshots/02-gameplay-landscape.png
