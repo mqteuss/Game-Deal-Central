@@ -30,11 +30,45 @@ jobs:
           exec > >(tee pulsebreak-ci/setup.log) 2>&1
           set -euo pipefail
           base64 --decode pulsebreak-ci/pulsebreak_project.tar.gz.b64 > /tmp/pulsebreak_project.tar.gz
-          sha256sum /tmp/pulsebreak_project.tar.gz
           tar -xzf /tmp/pulsebreak_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
-          ls -lah pulsebreak-ci
-          python3 pulsebreak-ci/apply_fix.py
+
+          cat > /tmp/upgrades_block.gd <<'EOF'
+          var upgrades: Array[Dictionary] = []
+
+          func make_upgrade(id: String, title: String, description: String, tint: Color) -> Dictionary:
+          	return {"id": id, "title": title, "desc": description, "color": tint}
+
+          func setup_upgrades() -> void:
+          	upgrades.clear()
+          	upgrades.append(make_upgrade("damage", "NÚCLEO OFENSIVO", "+24% de dano dos projéteis", RED))
+          	upgrades.append(make_upgrade("firerate", "CADÊNCIA VETORIAL", "Dispara 17% mais rápido", CYAN))
+          	upgrades.append(make_upgrade("speed", "IMPULSO CINÉTICO", "+12% de velocidade", GREEN))
+          	upgrades.append(make_upgrade("maxhp", "BLINDAGEM VIVA", "+25 de vida máxima e cura 25", ORANGE))
+          	upgrades.append(make_upgrade("multishot", "FEIXE DUPLO", "Adiciona um projétil lateral", PURPLE))
+          	upgrades.append(make_upgrade("pierce", "MUNIÇÃO FÁSICA", "Projéteis atravessam +1 alvo", YELLOW))
+          	upgrades.append(make_upgrade("pulse", "RESSONÂNCIA", "Pulso maior, forte e mais frequente", CYAN_SOFT))
+          	upgrades.append(make_upgrade("dash", "RUPTURA", "Dash recarrega mais rápido", WHITE))
+          	upgrades.append(make_upgrade("magnet", "CAMPO COLETOR", "+45 de alcance para coletar XP", GREEN))
+          	upgrades.append(make_upgrade("armor", "MALHA REATIVA", "-10% de dano recebido", MUTED))
+          	upgrades.append(make_upgrade("regen", "RECUPERAÇÃO", "Regenera 1,2 de vida por segundo", GREEN))
+          EOF
+          sed -i 's/^          //' /tmp/upgrades_block.gd
+
+          awk '
+            /^var upgrades := \[$/ {
+              while ((getline line < "/tmp/upgrades_block.gd") > 0) print line
+              close("/tmp/upgrades_block.gd")
+              skip = 1
+              next
+            }
+            skip && /^\]$/ { skip = 0; next }
+            !skip { print }
+          ' "$PROJECT_PATH/main.gd" > "$PROJECT_PATH/main.gd.fixed"
+          mv "$PROJECT_PATH/main.gd.fixed" "$PROJECT_PATH/main.gd"
+          sed -i '/^[[:space:]]*rng.randomize()$/a\	setup_upgrades()' "$PROJECT_PATH/main.gd"
+          grep -q '^var upgrades: Array\[Dictionary\] = \[\]$' "$PROJECT_PATH/main.gd"
+          grep -q $'^\tsetup_upgrades()$' "$PROJECT_PATH/main.gd"
           nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,150p' | tee pulsebreak-ci/source_excerpt.log
 
       - name: Configure Godot
