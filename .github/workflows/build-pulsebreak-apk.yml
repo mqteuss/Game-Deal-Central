@@ -1,4 +1,4 @@
-name: Probe PULSEBREAK Runtime
+name: Build Fixed PULSEBREAK APK
 
 on:
   pull_request:
@@ -12,10 +12,11 @@ permissions:
 env:
   GODOT_VERSION: "4.7"
   PROJECT_PATH: godot-game
+  EXPORT_NAME: PULSEBREAK-fixed
 
 jobs:
-  runtime:
-    name: Execute game runtime probe
+  android:
+    name: Validate runtime and export fixed APK
     runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.7
@@ -70,7 +71,6 @@ jobs:
           bash pulsebreak-ci/apply_type_fixes.sh
           grep -q '^var upgrades: Array\[Dictionary\] = \[\]$' "$PROJECT_PATH/main.gd"
           grep -q $'^\tsetup_upgrades()$' "$PROJECT_PATH/main.gd"
-          nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,175p' | tee pulsebreak-ci/source_excerpt.log
 
       - name: Configure Godot
         shell: bash
@@ -101,15 +101,36 @@ jobs:
             exit 1
           fi
 
+      - name: Export fixed Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/android
+          EXPORT_DIR="$(readlink -f build/android)"
+          cd "$PROJECT_PATH"
+          godot --headless --verbose --export-debug "Android" "$EXPORT_DIR/${EXPORT_NAME}.apk" 2>&1 | tee ../pulsebreak-ci/export.log
+          test -s "$EXPORT_DIR/${EXPORT_NAME}.apk"
+          sha256sum "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee "$EXPORT_DIR/${EXPORT_NAME}.apk.sha256"
+          unzip -t "$EXPORT_DIR/${EXPORT_NAME}.apk" | tee ../pulsebreak-ci/apk-integrity.log
+
+      - name: Upload fixed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PULSEBREAK-fixed-Android-APK
+          path: build/android/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PULSEBREAK-runtime-diagnostics
+          name: PULSEBREAK-fixed-diagnostics
           path: |
             pulsebreak-ci/setup.log
             pulsebreak-ci/import.log
             pulsebreak-ci/runtime.log
-            pulsebreak-ci/source_excerpt.log
+            pulsebreak-ci/export.log
+            pulsebreak-ci/apk-integrity.log
           if-no-files-found: warn
           retention-days: 7
