@@ -34,6 +34,7 @@ jobs:
           echo "a79cde26cfb493d4b659d7ec8a067ad0743845b3ae3d19543cee7e9200fe6ba6  /tmp/pulsebreak_project.tar.gz" | sha256sum -c -
           tar -xzf /tmp/pulsebreak_project.tar.gz
           test -f "$PROJECT_PATH/project.godot"
+          nl -ba "$PROJECT_PATH/main.gd" | sed -n '108,128p' | tee pulsebreak-ci/source_excerpt.log
 
       - name: Configure Godot
         shell: bash
@@ -72,5 +73,6 @@ jobs:
           path: |
             pulsebreak-ci/import.log
             pulsebreak-ci/runtime.log
+            pulsebreak-ci/source_excerpt.log
           if-no-files-found: error
           retention-days: 7
