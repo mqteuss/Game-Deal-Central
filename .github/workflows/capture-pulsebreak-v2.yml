@@ -56,7 +56,7 @@ jobs:
           test -s ../pulsebreak-v2/screenshots/01-menu-landscape.png
           test -s ../pulsebreak-v2/screenshots/02-gameplay-landscape.png
           test -s ../pulsebreak-v2/screenshots/03-settings-landscape.png
-          file ../pulsebreak-v2/screenshots/*.png | tee ../pulsebreak-v2/screenshots.log
+          wc -c ../pulsebreak-v2/screenshots/*.png | tee ../pulsebreak-v2/screenshots.log
 
       - name: Upload rendered validation
         if: always()
